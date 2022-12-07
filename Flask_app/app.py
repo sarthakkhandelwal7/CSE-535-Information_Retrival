@@ -4,6 +4,7 @@ import urllib.request
 from nltk.chat.util  import Chat, reflections
 import regex as re
 from query_processor import PreProcessor
+from summerize import generate_summary
 # from multi_rake import Rake
 # rake = Rake()
 # keywords = rake.apply(full_text)
@@ -68,10 +69,6 @@ chit_chat = [[
         ["I'm a very big fan of Football",]
     ],
     [
-        r"who (.*) (Footballer|Player)?",
-        ["Leonel Messi"]
-    ],
-    [
         r"quit",
         ["Bye for now. See you soon :) ","It was nice talking to you. See you soon :)"]
     ],
@@ -94,22 +91,37 @@ def respond():
         resp = {'message': bot_resp}
 
     else:
-        # msg = ' '.join(preprocessor.pre_process_string(msg))
-        query = urllib.parse.quote(msg)
-        # url_edismax = f'http://34.68.24.93:8983/solr/project_4/select?defType=edismax&indent=true&q.op=OR&q=body%3A{query}%20subreddit%3A{query}%20parent_body%3A{query}&rows=1&fl=id%2Cscore%2Cbody%2Cparent_body%2Cselftext'
-        # url = f'http://34.68.24.93:8983/solr/project_4/select?fl=id%2Cscore%2Cbody%2Cselftext%2Cparent_body&rows=1&indent=true&q.op=OR&q=subreddit%3A{query}%0Aselftext%3A{query}%0Aparent_body%3A{query}'
-        # url_lucene = f'http://34.68.24.93:8983/solr/project_4/select?defType=lucene&indent=true&q.op=OR&q=body%3A{query}%20subreddit%3A{query}%20parent_body%3A{query}&rows=1&fl=id%2Cscore%2Cbody%2Cparent_body'
-        # urls = [url_edismax, url, url_lucene]
-        url = f'http://34.68.24.93:8983/solr/project_4/select?fl=id%2Cscore%2Cbody%2Cselftext%2Cparent_body%2Ctitle%2Ctopic&rows=1&defType=dismax&indent=true&q.op=OR&q=subreddit%3A{query}%0Abody%3A{query}%0Aselftext%3A{query}%0Aparent_body%3A{query}&qf=title%5E1.7%20subreddit%5E1.2%20body%20selftext%5E1.4%20parent_body%20topic'
+        """query = ' '.join(preprocessor.pre_process_string(msg))
+        query = urllib.parse.quote(query)
+        url = f'http://34.68.24.93:8983/solr/project_4/select?fl=id%2Cscore%2Cbody%2Cselftext%2Cparent_body%2Ctitle%2Ctopic&rows=1&defType=dismax&indent=true&q.op=OR&q=subreddit%3A{query}%0Abody%3A{query}%0Aselftext%3A{query}%0Aparent_body%3A{query}&qf=title%5E1.7%20subreddit%5E1.2%20body%20selftext%5E1.2%20parent_body%20topic'
         data = json.load(urllib.request.urlopen(url))
-        # docs = json.load(data)['response']['docs']
         resp = {
-                "query": query,
-                "maxScore": data['response']['maxScore'],
-                "numFound": data['response']['numFound'],
                 "message": data['response']['docs']
+        }"""
+        query_yes = ' '.join(preprocessor.pre_process_string(msg))
+        query_yes = urllib.parse.quote(query_yes)
+        query_no = urllib.parse.quote(msg)
+        url_yes = f'http://34.68.24.93:8983/solr/project_4/select?fl=id%2Cscore%2Cbody%2Cselftext%2Cparent_body%2Ctitle%2Ctopic&rows=1&defType=dismax&indent=true&q.op=OR&q=subreddit%3A{query_yes}%0Abody%3A{query_yes}%0Aselftext%3A{query_yes}%0Aparent_body%3A{query_yes}&qf=title%5E1.7%20subreddit%5E1.2%20body%20selftext%5E1.2%20parent_body%20topic'
+        url_no = f'http://34.68.24.93:8983/solr/project_4/select?fl=id%2Cscore%2Cbody%2Cselftext%2Cparent_body%2Ctitle%2Ctopic&rows=1&defType=dismax&indent=true&q.op=OR&q=subreddit%3A{query_no}%0Abody%3A{query_no}%0Aselftext%3A{query_no}%0Aparent_body%3A{query_no}&qf=title%5E1.7%20subreddit%5E1.2%20body%20selftext%5E1.2%20parent_body%20topic'
+        data_yes = json.load(urllib.request.urlopen(url_yes))
+        data_no = json.load(urllib.request.urlopen(url_no))
+        resp = {
+                "message": [
+                    {
+                        'Is_pre_preocessed': 'Yes',
+                        'response': generate_summary(data_yes, preprocessor, 3),
+                        "maxScore": data_yes['response']['maxScore'],
+                        "numFound": data_yes['response']['numFound'],
+                },
+                {
+                    'Is_pre_preocessed': 'No',
+                    'response': generate_summary(data_no, preprocessor, 3),
+                    "numFound": data_no['response']['numFound'],
+                    "maxScore": data_no['response']['maxScore'],
+                }
+                ]
         }
-    
+        
     return jsonify(
-       message=resp 
+    message=resp
     )
